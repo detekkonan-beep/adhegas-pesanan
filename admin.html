@@ -1,0 +1,247 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin AdheGas</title>
+<style>
+body{font-family:Arial;background:#eef2f7;padding:15px;margin:0}
+.container{background:white;padding:20px;border-radius:14px;max-width:900px;margin:20px auto}
+h2{color:#1769aa}
+input{width:100%;padding:13px;margin:8px 0 15px;box-sizing:border-box;border:1px solid #ccc;border-radius:7px;font-size:16px}
+button{padding:12px;background:#1769aa;color:white;border:0;border-radius:7px;font-size:15px;margin:4px;cursor:pointer}
+.hapus{background:#d93025}
+.edit{background:#16834a}
+#dashboard{display:none}
+#hasil{margin:12px 0;color:#1769aa}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{padding:10px;border:1px solid #ddd;text-align:left}
+th{background:#1769aa;color:white}
+.table-wrap{overflow-x:auto}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>Administrator AdheGas</h2>
+
+<div id="login">
+<h3>Login Administrator</h3>
+<label>Email</label>
+<input id="email" type="email" placeholder="Email Anda">
+<label>Password</label>
+<input id="password" type="password" placeholder="Password Anda">
+<button onclick="login()">LOGIN</button>
+</div>
+
+<p id="hasil"></p>
+
+<div id="dashboard">
+<h3>Daftar Pesanan</h3>
+<button onclick="muatPesanan()">Muat Ulang</button>
+<button onclick="logout()">LOGOUT</button>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Alamat</th>
+<th>Barang</th>
+<th>Jumlah</th>
+<th>Customer</th>
+<th>Aksi</th>
+</tr>
+</thead>
+<tbody id="daftar"></tbody>
+</table>
+</div>
+</div>
+</div>
+
+<script type="module">
+import { createClient } from
+'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+'https://bbjhnulqwhugdxucwjip.supabase.co',
+'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh'
+);
+
+const hasil = document.getElementById('hasil');
+
+function pesan(teks){
+hasil.textContent = teks;
+}
+
+async function periksaAdmin(){
+const {data:{user}} = await supabase.auth.getUser();
+
+if(!user) return false;
+
+const {data,error} = await supabase
+.from('admin_users')
+.select('user_id')
+.eq('user_id',user.id)
+.maybeSingle();
+
+if(error){
+pesan('Gagal memeriksa admin: '+error.message);
+return false;
+}
+
+return !!data;
+}
+
+async function tampilkanDashboard(){
+const admin = await periksaAdmin();
+
+if(!admin){
+pesan('Akun ini bukan administrator.');
+await supabase.auth.signOut();
+return;
+}
+
+document.getElementById('login').style.display='none';
+document.getElementById('dashboard').style.display='block';
+pesan('Login administrator berhasil.');
+await muatPesanan();
+}
+
+window.login = async function(){
+const email=document.getElementById('email').value;
+const password=document.getElementById('password').value;
+
+if(!email || !password){
+pesan('Isi email dan password terlebih dahulu.');
+return;
+}
+
+pesan('Sedang login...');
+
+const {error}=await supabase.auth.signInWithPassword({
+email,password
+});
+
+if(error){
+pesan('Login gagal: '+error.message);
+return;
+}
+
+await tampilkanDashboard();
+};
+
+window.logout = async function(){
+await supabase.auth.signOut();
+document.getElementById('login').style.display='block';
+document.getElementById('dashboard').style.display='none';
+pesan('Anda sudah logout.');
+};
+
+function aman(value){
+return String(value ?? '').replace(/[&<>"']/g,c=>({
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+'"':'&quot;',
+"'":'&#39;'
+}[c]));
+}
+
+window.muatPesanan = async function(){
+pesan('Mengambil data pesanan...');
+
+const {data,error}=await supabase
+.from('Pesan')
+.select('*')
+.order('id',{ascending:false});
+
+if(error){
+pesan('Gagal mengambil pesanan: '+error.message);
+return;
+}
+
+const daftar=document.getElementById('daftar');
+daftar.innerHTML='';
+
+data.forEach(p=>{
+const tr=document.createElement('tr');
+
+tr.innerHTML=`
+<td>${aman(p.id)}</td>
+<td>${aman(p.alamat)}</td>
+<td>${aman(p.barang)}</td>
+<td>${aman(p.jlh)}</td>
+<td>${aman(p.customer)}</td>
+<td>
+<button class="edit" data-action="edit">Edit</button>
+<button class="hapus" data-action="hapus">Hapus</button>
+</td>`;
+
+tr.querySelector('[data-action="edit"]').onclick=()=>editPesanan(p);
+tr.querySelector('[data-action="hapus"]').onclick=()=>hapusPesanan(p.id);
+
+daftar.appendChild(tr);
+});
+
+pesan('Jumlah pesanan: '+data.length);
+};
+
+async function editPesanan(p){
+const alamat=prompt('Alamat:',p.alamat);
+if(alamat===null)return;
+
+const barang=prompt('Barang:',p.barang);
+if(barang===null)return;
+
+const jlh=prompt('Jumlah:',p.jlh);
+if(jlh===null)return;
+
+const customer=prompt('Customer:',p.customer);
+if(customer===null)return;
+
+const {error}=await supabase
+.from('Pesan')
+.update({
+alamat,
+barang,
+jlh:Number(jlh),
+customer
+})
+.eq('id',p.id);
+
+if(error){
+pesan('Gagal mengubah: '+error.message);
+return;
+}
+
+pesan('Pesanan berhasil diubah.');
+await muatPesanan();
+}
+
+async function hapusPesanan(id){
+if(!confirm('Yakin ingin menghapus pesanan ini?'))return;
+
+const {error}=await supabase
+.from('Pesan')
+.delete()
+.eq('id',id);
+
+if(error){
+pesan('Gagal menghapus: '+error.message);
+return;
+}
+
+pesan('Pesanan berhasil dihapus.');
+await muatPesanan();
+}
+
+const {data:{session}}=await supabase.auth.getSession();
+
+if(session){
+await tampilkanDashboard();
+}
+</script>
+</body>
+</html>
