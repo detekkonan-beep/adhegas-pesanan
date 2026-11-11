@@ -5,45 +5,186 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin AdheGas</title>
+
 <style>
-body{font-family:Arial;background:#eef2f7;padding:15px;margin:0}
-.container{background:white;padding:20px;border-radius:14px;max-width:900px;margin:20px auto}
+*{box-sizing:border-box}
+
+body{
+font-family:Arial,sans-serif;
+background:#eef2f7;
+padding:12px;
+margin:0;
+}
+
+.container{
+background:white;
+padding:18px;
+border-radius:12px;
+max-width:1000px;
+margin:15px auto;
+}
+
 h2{color:#1769aa}
-input{width:100%;padding:13px;margin:8px 0 15px;box-sizing:border-box;border:1px solid #ccc;border-radius:7px;font-size:16px}
-button{padding:12px;background:#1769aa;color:white;border:0;border-radius:7px;font-size:15px;margin:4px;cursor:pointer}
-.hapus{background:#d93025}
+
+input{
+width:100%;
+padding:13px;
+margin:8px 0 15px;
+border:1px solid #ccc;
+border-radius:7px;
+font-size:16px;
+}
+
+button{
+padding:12px 16px;
+background:#1769aa;
+color:white;
+border:0;
+border-radius:7px;
+font-size:15px;
+margin:4px;
+cursor:pointer;
+}
+
 .edit{background:#16834a}
+.hapus{background:#d93025}
+.batal{background:#777}
+
 #dashboard{display:none}
-#hasil{margin:12px 0;color:#1769aa}
-table{width:100%;border-collapse:collapse;margin-top:15px}
-th,td{padding:10px;border:1px solid #ddd;text-align:left}
-th{background:#1769aa;color:white}
-.table-wrap{overflow-x:auto}
+
+#hasil{
+padding:10px;
+color:#1769aa;
+font-weight:bold;
+}
+
+#formEdit{
+display:none;
+background:#eaf3fc;
+padding:15px;
+border-radius:10px;
+margin:15px 0;
+border:1px solid #b9d5ed;
+}
+
+.table-wrap{
+width:100%;
+overflow-x:auto;
+}
+
+table{
+width:100%;
+min-width:650px;
+border-collapse:collapse;
+margin-top:15px;
+}
+
+th,td{
+padding:12px;
+border:1px solid #ccc;
+text-align:left;
+}
+
+/* BARIS SELANG-SELING */
+
+#daftar tr:nth-child(odd) td{
+background:#111;
+color:white;
+}
+
+#daftar tr:nth-child(even) td{
+background:white;
+color:black;
+}
+
+/* TOMBOL DALAM DAFTAR */
+
+#daftar button{
+font-size:13px;
+padding:9px 12px;
+}
+
+#daftar .edit{background:#16834a;color:white}
+#daftar .hapus{background:#d93025;color:white}
+
+th{
+background:#1769aa;
+color:white;
+}
+
+@media(max-width:600px){
+.container{padding:12px}
+h2{font-size:21px}
+button{font-size:14px}
+}
 </style>
 </head>
+
 <body>
 
 <div class="container">
-<h2>Administrator AdheGas</h2>
+
+<h2>ADMINISTRATOR ADHEGAS</h2>
+
+<!-- LOGIN -->
 
 <div id="login">
+
 <h3>Login Administrator</h3>
+
 <label>Email</label>
 <input id="email" type="email" placeholder="Email Anda">
+
 <label>Password</label>
 <input id="password" type="password" placeholder="Password Anda">
+
 <button onclick="login()">LOGIN</button>
+
 </div>
 
 <p id="hasil"></p>
 
+<!-- DASHBOARD -->
+
 <div id="dashboard">
-<h3>Daftar Pesanan</h3>
-<button onclick="muatPesanan()">Muat Ulang</button>
+
+<h3>DAFTAR PESANAN</h3>
+
+<button onclick="muatPesanan()">MUAT ULANG</button>
 <button onclick="logout()">LOGOUT</button>
 
+<!-- FORM EDIT -->
+
+<div id="formEdit">
+
+<h3>EDIT PESANAN</h3>
+
+<input type="hidden" id="editId">
+
+<label>Alamat</label>
+<input id="editAlamat" type="text">
+
+<label>Barang</label>
+<input id="editBarang" type="text">
+
+<label>Jumlah</label>
+<input id="editJlh" type="number" min="1">
+
+<label>Customer</label>
+<input id="editCustomer" type="text">
+
+<button onclick="simpanEdit()">SIMPAN PERUBAHAN</button>
+
+<button class="batal" onclick="batalEdit()">BATAL</button>
+
+</div>
+
+<!-- TABEL PESANAN -->
+
 <div class="table-wrap">
+
 <table>
+
 <thead>
 <tr>
 <th>ID</th>
@@ -54,33 +195,41 @@ th{background:#1769aa;color:white}
 <th>Aksi</th>
 </tr>
 </thead>
+
 <tbody id="daftar"></tbody>
+
 </table>
+
 </div>
+
 </div>
 </div>
 
 <script type="module">
+
 import { createClient } from
 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-const supabase = createClient(
+const supabase=createClient(
 'https://bbjhnulqwhugdxucwjip.supabase.co',
 'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh'
 );
 
-const hasil = document.getElementById('hasil');
+const hasil=document.getElementById('hasil');
 
 function pesan(teks){
-hasil.textContent = teks;
+hasil.textContent=teks;
 }
 
+// CEK ADMIN
+
 async function periksaAdmin(){
-const {data:{user}} = await supabase.auth.getUser();
 
-if(!user) return false;
+const {data:{user}}=await supabase.auth.getUser();
 
-const {data,error} = await supabase
+if(!user)return false;
+
+const {data,error}=await supabase
 .from('admin_users')
 .select('user_id')
 .eq('user_id',user.id)
@@ -94,8 +243,11 @@ return false;
 return !!data;
 }
 
+// TAMPILKAN DASHBOARD
+
 async function tampilkanDashboard(){
-const admin = await periksaAdmin();
+
+const admin=await periksaAdmin();
 
 if(!admin){
 pesan('Akun ini bukan administrator.');
@@ -105,16 +257,22 @@ return;
 
 document.getElementById('login').style.display='none';
 document.getElementById('dashboard').style.display='block';
-pesan('Login administrator berhasil.');
+
+pesan('Login berhasil.');
+
 await muatPesanan();
+
 }
 
-window.login = async function(){
-const email=document.getElementById('email').value;
+// LOGIN
+
+window.login=async function(){
+
+const email=document.getElementById('email').value.trim();
 const password=document.getElementById('password').value;
 
-if(!email || !password){
-pesan('Isi email dan password terlebih dahulu.');
+if(!email||!password){
+pesan('Isi email dan password.');
 return;
 }
 
@@ -130,26 +288,42 @@ return;
 }
 
 await tampilkanDashboard();
+
 };
 
-window.logout = async function(){
+// LOGOUT
+
+window.logout=async function(){
+
 await supabase.auth.signOut();
+
 document.getElementById('login').style.display='block';
 document.getElementById('dashboard').style.display='none';
+
+batalEdit();
+
 pesan('Anda sudah logout.');
+
 };
 
+// PENGAMAN TEKS
+
 function aman(value){
-return String(value ?? '').replace(/[&<>"']/g,c=>({
+
+return String(value??'').replace(/[&<>"']/g,c=>({
 '&':'&amp;',
 '<':'&lt;',
 '>':'&gt;',
 '"':'&quot;',
 "'":'&#39;'
 }[c]));
+
 }
 
-window.muatPesanan = async function(){
+// MUAT PESANAN
+
+window.muatPesanan=async function(){
+
 pesan('Mengambil data pesanan...');
 
 const {data,error}=await supabase
@@ -158,14 +332,16 @@ const {data,error}=await supabase
 .order('id',{ascending:false});
 
 if(error){
-pesan('Gagal mengambil pesanan: '+error.message);
+pesan('Gagal mengambil data: '+error.message);
 return;
 }
 
 const daftar=document.getElementById('daftar');
+
 daftar.innerHTML='';
 
 data.forEach(p=>{
+
 const tr=document.createElement('tr');
 
 tr.innerHTML=`
@@ -175,52 +351,117 @@ tr.innerHTML=`
 <td>${aman(p.jlh)}</td>
 <td>${aman(p.customer)}</td>
 <td>
-<button class="edit" data-action="edit">Edit</button>
-<button class="hapus" data-action="hapus">Hapus</button>
-</td>`;
+<button class="edit">EDIT</button>
+<button class="hapus">HAPUS</button>
+</td>
+`;
 
-tr.querySelector('[data-action="edit"]').onclick=()=>editPesanan(p);
-tr.querySelector('[data-action="hapus"]').onclick=()=>hapusPesanan(p.id);
+tr.querySelector('.edit').onclick=()=>{
+editPesanan(p);
+};
+
+tr.querySelector('.hapus').onclick=()=>{
+hapusPesanan(p.id);
+};
 
 daftar.appendChild(tr);
+
 });
 
 pesan('Jumlah pesanan: '+data.length);
+
 };
 
-async function editPesanan(p){
-const alamat=prompt('Alamat:',p.alamat);
-if(alamat===null)return;
+// EDIT PESANAN
 
-const barang=prompt('Barang:',p.barang);
-if(barang===null)return;
+function editPesanan(p){
 
-const jlh=prompt('Jumlah:',p.jlh);
-if(jlh===null)return;
+document.getElementById('formEdit').style.display='block';
 
-const customer=prompt('Customer:',p.customer);
-if(customer===null)return;
+document.getElementById('editId').value=p.id;
+document.getElementById('editAlamat').value=p.alamat??'';
+document.getElementById('editBarang').value=p.barang??'';
+document.getElementById('editJlh').value=p.jlh??'';
+document.getElementById('editCustomer').value=p.customer??'';
 
-const {error}=await supabase
-.from('Pesan')
-.update({
-alamat,
-barang,
-jlh:Number(jlh),
-customer
-})
-.eq('id',p.id);
+pesan('Silakan ubah pesanan.');
 
-if(error){
-pesan('Gagal mengubah: '+error.message);
+document.getElementById('formEdit').scrollIntoView({
+behavior:'smooth'
+});
+
+}
+
+// SIMPAN EDIT
+
+window.simpanEdit=async function(){
+
+const id=document.getElementById('editId').value;
+
+const alamat=document.getElementById('editAlamat').value.trim();
+const barang=document.getElementById('editBarang').value.trim();
+const jlh=document.getElementById('editJlh').value;
+const customer=document.getElementById('editCustomer').value.trim();
+
+if(!alamat||!barang||!jlh||!customer){
+pesan('Semua kolom harus diisi.');
 return;
 }
 
-pesan('Pesanan berhasil diubah.');
-await muatPesanan();
+if(!Number.isInteger(Number(jlh))||Number(jlh)<1){
+pesan('Jumlah minimal 1.');
+return;
 }
 
+pesan('Menyimpan perubahan...');
+
+const {data,error}=await supabase
+.from('Pesan')
+.update({
+alamat:alamat,
+barang:barang,
+jlh:Number(jlh),
+customer:customer
+})
+.eq('id',id)
+.select();
+
+if(error){
+pesan('Gagal menyimpan: '+error.message);
+return;
+}
+
+if(!data||data.length===0){
+pesan('Data tidak berubah. Periksa izin UPDATE Supabase.');
+return;
+}
+
+document.getElementById('formEdit').style.display='none';
+
+pesan('Pesanan berhasil diperbarui.');
+
+await muatPesanan();
+
+};
+
+// BATAL EDIT
+
+window.batalEdit=function(){
+
+document.getElementById('formEdit').style.display='none';
+
+document.getElementById('editId').value='';
+document.getElementById('editAlamat').value='';
+document.getElementById('editBarang').value='';
+document.getElementById('editJlh').value='';
+document.getElementById('editCustomer').value='';
+
+};
+
+// HAPUS PESANAN
+
 async function hapusPesanan(id){
+
 if(!confirm('Yakin ingin menghapus pesanan ini?'))return;
 
 const {error}=await supabase
@@ -234,14 +475,20 @@ return;
 }
 
 pesan('Pesanan berhasil dihapus.');
+
 await muatPesanan();
+
 }
+
+// PERIKSA SESSION
 
 const {data:{session}}=await supabase.auth.getSession();
 
 if(session){
 await tampilkanDashboard();
 }
+
 </script>
+
 </body>
 </html>
