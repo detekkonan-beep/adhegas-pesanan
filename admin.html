@@ -340,10 +340,11 @@ const daftar=document.getElementById('daftar');
 
 daftar.innerHTML='';
 
-data.forEach(p=>{
-
+data.forEach((p,index)=>{
 const tr=document.createElement('tr');
-
+const warna=index % 2 === 0;
+tr.style.backgroundColor=warna ? '#000000' : '#ffffff';
+tr.style.color=warna ? '#ffffff' : '#000000';
 tr.innerHTML=`
 <td>${aman(p.id)}</td>
 <td>${aman(p.alamat)}</td>
@@ -355,18 +356,19 @@ tr.innerHTML=`
 <button class="hapus">HAPUS</button>
 </td>
 `;
-
+tr.querySelectorAll('td').forEach(td=>{
+td.style.backgroundColor=warna ? '#000000' : '#ffffff';
+td.style.color=warna ? '#ffffff' : '#000000';
+});
 tr.querySelector('.edit').onclick=()=>{
 editPesanan(p);
 };
-
 tr.querySelector('.hapus').onclick=()=>{
 hapusPesanan(p.id);
 };
-
 daftar.appendChild(tr);
-
 });
+
 
 pesan('Jumlah pesanan: '+data.length);
 
