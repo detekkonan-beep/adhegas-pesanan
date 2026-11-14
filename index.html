@@ -437,46 +437,42 @@ el('formPesan').addEventListener('submit',async e=>{
   tombol.disabled = true;
   hasil.textContent = 'Sedang menyimpan pesanan...';
 
-  try {
 
-    const {data: hasilInsert, error} = await supabase
-  .from('Pesan')
-  .insert(data)
-  .select();
+try {
 
-console.log('Data insert:', hasilInsert);
-console.log('Error insert:', error);
+  const { error } = await supabase
+    .from('Pesan')
+    .insert(data);
 
-if(error) {
+  console.log('Data pesanan:', data);
+  console.log('Error Supabase:', error);
+
+  if (error) {
+    hasil.textContent =
+      'GAGAL: ' + error.message;
+  } else {
+    hasil.textContent =
+      'PESANAN BERHASIL DISIMPAN';
+
+    el('formPesan').reset();
+
+    latitude = null;
+    longitude = null;
+    alamatTerpilih = '';
+    lokasiSiap = false;
+  }
+
+} catch (error) {
+
   hasil.textContent =
-    'GAGAL: ' + JSON.stringify(error);
-} else {
-  hasil.textContent = 'PESANAN BERHASIL DISIMPAN';
+    'GAGAL: ' + error.message;
+
+} finally {
+
+  tombol.disabled = false;
+
 }
 
-    if(error) {
-      hasil.textContent =
-        'GAGAL: '+error.message;
-    } else {
-
-      hasil.textContent =
-        'PESANAN BERHASIL DISIMPAN';
-
-      el('formPesan').reset();
-
-      latitude = null;
-      longitude = null;
-      alamatTerpilih = '';
-      lokasiSiap = false;
-
-    }
-
-  } catch(error) {
-
-    hasil.textContent =
-      'GAGAL: '+error.message;
-
-  } finally {
 
     tombol.disabled = false;
 
