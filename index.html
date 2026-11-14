@@ -153,41 +153,51 @@ let permintaanAlamat = 0;
 
 // MEMUAT BARANG DARI SUPABASE
 
-async function muatBarang() {
 
+// MEMUAT BARANG LANGSUNG DARI REST API SUPABASE
+
+async function muatBarang() {
   const pilihan = el('barang');
   const hasil = el('hasil');
 
   pilihan.innerHTML =
     '<option value="">Menghubungkan ke database...</option>';
 
+  const url =
+    'https://bbjhnulqwhugdxucwjip.supabase.co/rest/v1/stok_barang?select=id,nama_barang&order=nama_barang.asc';
+
+  const key =
+    'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh';
+
   try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'apikey': key,
+        'Authorization': 'Bearer ' + key
+      }
+    });
 
-    const {data,error,status} = await supabase
-      .from('stok_barang')
-      .select('id,nama_barang')
-      .order('nama_barang')
-      .limit(100);
+    const isi = await response.text();
 
-    console.log('Status:',status);
-    console.log('Data barang:',data);
-    console.log('Error:',error);
+    console.log('HTTP Status:', response.status);
+    console.log('Hasil API:', isi);
 
-    if(error) {
-      pilihan.innerHTML =
-        '<option value="">Gagal membaca barang</option>';
-
-      hasil.textContent =
-        'ERROR DATABASE: '+error.message;
-      return;
+    if (!response.ok) {
+      throw new Error(
+        'HTTP ' + response.status + ': ' + isi
+      );
     }
 
-    if(!data || data.length === 0) {
+    const data = JSON.parse(isi);
+
+    if (!Array.isArray(data) || data.length === 0) {
       pilihan.innerHTML =
         '<option value="">Data kosong</option>';
 
       hasil.textContent =
-        'API berhasil dihubungi tetapi tidak menemukan barang.';
+        'API berhasil. HTTP ' + response.status +
+        '. Data barang kosong.';
 
       return;
     }
@@ -196,27 +206,22 @@ async function muatBarang() {
       '<option value="">Pilih Barang</option>';
 
     data.forEach(item => {
-
       const option = document.createElement('option');
-
       option.value = item.nama_barang;
       option.textContent = item.nama_barang;
-
       pilihan.appendChild(option);
-
     });
 
     hasil.textContent =
-      'Berhasil memuat '+data.length+' jenis barang.';
+      'BERHASIL: ' + data.length +
+      ' jenis barang ditemukan.';
 
-  } catch(error) {
-
+  } catch (error) {
     pilihan.innerHTML =
-      '<option value="">Koneksi gagal</option>';
+      '<option value="">Gagal membaca barang</option>';
 
     hasil.textContent =
-      'KESALAHAN: '+error.message;
-
+      'KESALAHAN API: ' + error.message;
   }
 }
 
