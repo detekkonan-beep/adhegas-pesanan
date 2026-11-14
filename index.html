@@ -150,45 +150,78 @@ let lokasiSiap = false;
 let alamatSedangDicari = false;
 let permintaanAlamat = 0;
 
-// MEMUAT BARANG
+
+// MEMUAT BARANG DARI SUPABASE
 
 async function muatBarang() {
 
   const pilihan = el('barang');
-
-  const {data,error} = await supabase
-    .from('stok_barang')
-    .select('nama_barang')
-    .order('nama_barang');
+  const hasil = el('hasil');
 
   pilihan.innerHTML =
-    '<option value="">Pilih Barang</option>';
+    '<option value="">Menghubungkan ke database...</option>';
 
-  if(error) {
+  try {
+
+    const {data,error,status} = await supabase
+      .from('stok_barang')
+      .select('id,nama_barang')
+      .order('nama_barang')
+      .limit(100);
+
+    console.log('Status:',status);
+    console.log('Data barang:',data);
+    console.log('Error:',error);
+
+    if(error) {
+      pilihan.innerHTML =
+        '<option value="">Gagal membaca barang</option>';
+
+      hasil.textContent =
+        'ERROR DATABASE: '+error.message;
+      return;
+    }
+
+    if(!data || data.length === 0) {
+      pilihan.innerHTML =
+        '<option value="">Data kosong</option>';
+
+      hasil.textContent =
+        'API berhasil dihubungi tetapi tidak menemukan barang.';
+
+      return;
+    }
+
     pilihan.innerHTML =
-      '<option value="">Gagal memuat barang</option>';
-    el('hasil').textContent =
-      'Gagal membaca stok: '+error.message;
-    return;
-  }
+      '<option value="">Pilih Barang</option>';
 
-  if(!data || data.length === 0) {
+    data.forEach(item => {
+
+      const option = document.createElement('option');
+
+      option.value = item.nama_barang;
+      option.textContent = item.nama_barang;
+
+      pilihan.appendChild(option);
+
+    });
+
+    hasil.textContent =
+      'Berhasil memuat '+data.length+' jenis barang.';
+
+  } catch(error) {
+
     pilihan.innerHTML =
-      '<option value="">Belum ada barang</option>';
-    return;
+      '<option value="">Koneksi gagal</option>';
+
+    hasil.textContent =
+      'KESALAHAN: '+error.message;
+
   }
-
-  data.forEach(item => {
-    if(!item.nama_barang) return;
-
-    const option = document.createElement('option');
-    option.value = item.nama_barang;
-    option.textContent = item.nama_barang;
-    pilihan.appendChild(option);
-  });
 }
 
 muatBarang();
+
 
 // MEMBUKA PETA
 
