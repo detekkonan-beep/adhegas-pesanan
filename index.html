@@ -135,8 +135,15 @@ import {createClient} from
 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const supabase = createClient(
-'https://bbjhnulqwhugdxucwjip.supabase.co',
-'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh'
+  'https://bbjhnulqwhugdxucwjip.supabase.co',
+  'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh',
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  }
 );
 
 const el = id => document.getElementById(id);
