@@ -192,15 +192,15 @@ async function muatBarang() {
     const data = JSON.parse(isi);
 
     if (!Array.isArray(data) || data.length === 0) {
-      pilihan.innerHTML =
-        '<option value="">Data kosong</option>';
+  pilihan.innerHTML =
+    '<option value="">Data kosong</option>';
 
-      hasil.textContent =
-        'API berhasil. HTTP ' + response.status +
-        '. Data barang kosong.';
+  hasil.textContent =
+    'HASIL PEMERIKSAAN: HTTP ' + response.status +
+    ' | Isi jawaban API: ' + isi;
 
-      return;
-    }
+  return;
+}
 
     pilihan.innerHTML =
       '<option value="">Pilih Barang</option>';
