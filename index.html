@@ -432,9 +432,20 @@ el('formPesan').addEventListener('submit',async e=>{
 
   try {
 
-    const {error} = await supabase
-      .from('Pesan')
-      .insert(data);
+    const {data: hasilInsert, error} = await supabase
+  .from('Pesan')
+  .insert(data)
+  .select();
+
+console.log('Data insert:', hasilInsert);
+console.log('Error insert:', error);
+
+if(error) {
+  hasil.textContent =
+    'GAGAL: ' + JSON.stringify(error);
+} else {
+  hasil.textContent = 'PESANAN BERHASIL DISIMPAN';
+}
 
     if(error) {
       hasil.textContent =
