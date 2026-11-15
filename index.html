@@ -119,15 +119,23 @@ Simpan Pesanan
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<script type="module">
+<script>
 
-import { createClient } from
-'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// ==================================
+// PENGATURAN SUPABASE
+// ==================================
 
-const supabase = createClient(
-'https://bbjhnulqwhugdxucwjip.supabase.co',
-'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh'
-);
+const SUPABASE_URL =
+'https://bbjhnulqwhugdxucwjip.supabase.co';
+
+const API_KEY =
+'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh';
+
+const HEADERS = {
+'apikey': API_KEY,
+'Authorization': 'Bearer ' + API_KEY,
+'Content-Type': 'application/json'
+};
 
 const el = id => document.getElementById(id);
 
@@ -136,9 +144,10 @@ let longitude = null;
 let lokasiSiap = false;
 let marker = null;
 
-// ===============================
+
+// ==================================
 // PETA
-// ===============================
+// ==================================
 
 const map = L.map('map').setView([-2.5,118],5);
 
@@ -152,6 +161,11 @@ attribution:'© OpenStreetMap'
 
 setTimeout(() => map.invalidateSize(),500);
 
+
+// ==================================
+// PASANG MARKER
+// ==================================
+
 function pasangMarker(lat,lng){
 
 latitude = lat;
@@ -161,14 +175,19 @@ lokasiSiap = true;
 if(marker){
 marker.setLatLng([lat,lng]);
 }else{
+
 marker = L.marker([lat,lng],{
 draggable:true
 }).addTo(map);
 
 marker.on('dragend',function(){
+
 const p = marker.getLatLng();
+
 pilihLokasi(p.lat,p.lng);
+
 });
+
 }
 
 map.setView([lat,lng],17);
@@ -177,19 +196,24 @@ el('statusLokasi').textContent =
 'Lokasi berhasil dipilih.';
 
 reverseAlamat(lat,lng);
+
 }
 
-// ===============================
+
+// ==================================
 // PILIH LOKASI
-// ===============================
+// ==================================
 
-async function pilihLokasi(lat,lng){
+function pilihLokasi(lat,lng){
+
 pasangMarker(lat,lng);
+
 }
 
-// ===============================
+
+// ==================================
 // ALAMAT OTOMATIS
-// ===============================
+// ==================================
 
 async function reverseAlamat(lat,lng){
 
@@ -199,6 +223,7 @@ const url =
 `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
 
 const response = await fetch(url);
+
 const result = await response.json();
 
 if(result.display_name){
@@ -206,26 +231,35 @@ el('alamat').value = result.display_name;
 }
 
 }catch(error){
+
 console.log('Alamat otomatis tidak tersedia',error);
+
 }
 
 }
+
 
 // Klik peta
 map.on('click',function(e){
+
 pilihLokasi(e.latlng.lat,e.latlng.lng);
+
 });
 
-// ===============================
+
+// ==================================
 // GPS
-// ===============================
+// ==================================
 
 function gunakanGPS(){
 
 if(!navigator.geolocation){
+
 el('statusLokasi').textContent =
 'GPS tidak didukung perangkat ini.';
+
 return;
+
 }
 
 el('statusLokasi').textContent =
@@ -261,9 +295,10 @@ maximumAge:0
 
 el('btnGPS').addEventListener('click',gunakanGPS);
 
-// ===============================
-// JENIS BARANG DARI DATABASE
-// ===============================
+
+// ==================================
+// AMBIL JENIS BARANG DARI SUPABASE
+// ==================================
 
 async function muatBarang(){
 
@@ -272,23 +307,34 @@ const pilihan = el('barang');
 pilihan.innerHTML =
 '<option value="">Memuat jenis barang...</option>';
 
+el('hasil').textContent = '';
+
 try{
 
-const {data,error} = await supabase
-.from('stok_barang')
-.select('nama_barang')
-.order('nama_barang',{ascending:true});
+const url =
+SUPABASE_URL +
+'/rest/v1/stok_barang?select=nama_barang&order=nama_barang.asc';
 
-if(error){
-throw error;
+const response = await fetch(url,{
+method:'GET',
+headers:HEADERS
+});
+
+const data = await response.json();
+
+if(!response.ok){
+
+throw new Error(data.message || JSON.stringify(data));
+
 }
 
-if(!data || data.length === 0){
+if(!Array.isArray(data) || data.length === 0){
 
 pilihan.innerHTML =
 '<option value="">Belum ada jenis barang</option>';
 
 return;
+
 }
 
 pilihan.innerHTML =
@@ -309,40 +355,47 @@ pilihan.appendChild(option);
 
 });
 
-console.log('Barang berhasil dimuat:',data);
+console.log('Jenis barang berhasil dimuat:',data);
 
 }catch(error){
 
-console.error('Gagal membaca stok_barang:',error);
+console.error('Gagal memuat barang:',error);
 
 pilihan.innerHTML =
 '<option value="">Gagal memuat barang</option>';
 
 el('hasil').textContent =
-'Gagal membaca stok barang: ' + error.message;
+'Gagal membaca barang: ' + error.message;
 
 }
 
 }
 
-// ===============================
-// SIMPAN PESANAN
-// ===============================
+
+// ==================================
+// SIMPAN PESANAN KE SUPABASE
+// ==================================
 
 el('formPesan').addEventListener('submit',async function(e){
 
 e.preventDefault();
 
 if(!lokasiSiap){
+
 el('hasil').textContent =
 'Silakan tentukan lokasi pada peta terlebih dahulu.';
+
 return;
+
 }
 
 if(!el('barang').value){
+
 el('hasil').textContent =
 'Silakan pilih jenis barang.';
+
 return;
+
 }
 
 const data = {
@@ -362,6 +415,7 @@ longitude:longitude
 };
 
 const hasil = el('hasil');
+
 const tombol = el('btnSimpan');
 
 tombol.disabled = true;
@@ -371,12 +425,26 @@ hasil.textContent = 'Sedang menyimpan pesanan...';
 
 try{
 
-const {error} = await supabase
-.from('Pesan')
-.insert(data);
+const response = await fetch(
+SUPABASE_URL + '/rest/v1/Pesan',
+{
+method:'POST',
+headers:{
+...HEADERS,
+'Prefer':'return=minimal'
+},
+body:JSON.stringify(data)
+}
+);
 
-if(error){
-throw error;
+if(!response.ok){
+
+const errorData = await response.json();
+
+throw new Error(
+errorData.message || JSON.stringify(errorData)
+);
+
 }
 
 hasil.textContent =
@@ -389,8 +457,10 @@ longitude = null;
 lokasiSiap = false;
 
 if(marker){
+
 map.removeLayer(marker);
 marker = null;
+
 }
 
 el('statusLokasi').textContent =
@@ -401,6 +471,8 @@ el('statusLokasi').textContent =
 hasil.textContent =
 'GAGAL MENYIMPAN: ' + error.message;
 
+console.error(error);
+
 }finally{
 
 tombol.disabled = false;
@@ -410,11 +482,11 @@ tombol.textContent = 'Simpan Pesanan';
 
 });
 
-// ===============================
-// JALANKAN SAAT HALAMAN DIBUKA
-// ===============================
 
-// INI BAGIAN YANG SEBELUMNYA TERLEWAT
+// ==================================
+// JALANKAN SAAT HALAMAN DIBUKA
+// ==================================
+
 muatBarang();
 
 gunakanGPS();
