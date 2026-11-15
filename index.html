@@ -10,34 +10,50 @@
 href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
-* {box-sizing:border-box}
-body {
+*{box-sizing:border-box}
+
+body{
   font-family:Arial,sans-serif;
   background:#eef2f7;
   padding:15px;
   margin:0;
 }
-.container {
+
+.container{
   background:white;
   padding:20px;
   border-radius:15px;
   max-width:500px;
   margin:auto;
 }
-h2 {color:#1769aa}
-label {
+
+h2{color:#1769aa}
+
+label{
   display:block;
-  margin-top:10px;
+  font-weight:bold;
+  margin-top:12px;
 }
-input,select {
+
+input,select{
   width:100%;
   padding:14px;
-  margin:8px 0 15px;
+  margin:8px 0 12px;
   border:1px solid #ccc;
   border-radius:8px;
   font-size:16px;
+  background:white;
 }
-button {
+
+#map{
+  width:100%;
+  height:300px;
+  border-radius:10px;
+  margin:10px 0;
+  border:1px solid #ccc;
+}
+
+button{
   width:100%;
   padding:15px;
   background:#1769aa;
@@ -45,31 +61,25 @@ button {
   border:0;
   border-radius:8px;
   font-size:17px;
-  margin-top:8px;
+  font-weight:bold;
+  margin-top:12px;
 }
-button:disabled {
-  background:#999;
+
+button:disabled{
+  background:#888;
 }
-#hasil {
+
+.info{
+  font-size:13px;
+  color:#555;
+  margin:5px 0 10px;
+}
+
+#hasil{
   margin-top:15px;
   font-weight:bold;
+  text-align:center;
 }
-#petaModal {
-  display:none;
-  position:fixed;
-  inset:0;
-  background:white;
-  z-index:9999;
-  padding:12px;
-  overflow:auto;
-}
-#map {
-  height:60vh;
-  width:100%;
-  border-radius:10px;
-  margin-top:10px;
-}
-.tutup {background:#666}
 </style>
 </head>
 
@@ -82,22 +92,32 @@ button:disabled {
 <form id="formPesan">
 
 <label>Alamat Pengiriman</label>
-<input id="alamat"
-placeholder="Tekan untuk memilih lokasi"
-readonly required>
+<input id="alamat" placeholder="Alamat lengkap pelanggan" required>
 
-<label>Barang</label>
+<label>Lokasi Pengiriman</label>
+<div id="map"></div>
+
+<p class="info" id="statusLokasi">
+Mencari lokasi GPS...
+</p>
+
+<button type="button" id="btnGPS">
+Gunakan Lokasi GPS Saya
+</button>
+
+<label>Jenis Barang</label>
 <select id="barang" required>
-<option value="">Memuat barang...</option>
+<option value="">Memuat jenis barang...</option>
 </select>
 
 <label>Jumlah (jlh)</label>
-<input id="jlh" type="number" min="1" required>
+<input id="jlh" type="number" min="1"
+placeholder="Masukkan jumlah" required>
 
-<label>Customer</label>
-<input id="customer" required>
+<label>Nama Customer</label>
+<input id="customer" placeholder="Nama pelanggan" required>
 
-<button type="submit" id="tombolSimpan">
+<button type="submit" id="btnSimpan">
 Simpan Pesanan
 </button>
 
@@ -107,203 +127,140 @@ Simpan Pesanan
 
 </div>
 
-<div id="petaModal">
-
-<h3>Tentukan Lokasi Pengiriman</h3>
-
-<p id="statusGPS">
-Sedang mempersiapkan peta...
-</p>
-
-<div id="map"></div>
-
-<button type="button" id="pilihLokasi">
-Gunakan Lokasi Ini
-</button>
-
-<button type="button" class="tutup" id="batalPeta">
-Batal
-</button>
-
-</div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module">
 
-import {createClient} from
+import { createClient } from
 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const supabase = createClient(
-  'https://bbjhnulqwhugdxucwjip.supabase.co',
-  'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh',
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false
-    }
-  }
+'https://bbjhnulqwhugdxucwjip.supabase.co',
+'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh'
 );
 
 const el = id => document.getElementById(id);
 
-let map = null;
-let marker = null;
 let latitude = null;
 let longitude = null;
-let alamatTerpilih = '';
 let lokasiSiap = false;
-let alamatSedangDicari = false;
-let permintaanAlamat = 0;
+let marker = null;
 
+// ===============================
+// PETA
+// ===============================
 
-// MEMUAT BARANG DARI SUPABASE
+const map = L.map('map').setView([-2.5,118],5);
 
-
-// MEMUAT BARANG LANGSUNG DARI REST API SUPABASE
-
-async function muatBarang() {
-  const pilihan = el('barang');
-  const hasil = el('hasil');
-
-  pilihan.innerHTML =
-    '<option value="">Menghubungkan ke database...</option>';
-
-  const url =
-    'https://bbjhnulqwhugdxucwjip.supabase.co/rest/v1/stok_barang?select=id,nama_barang&order=nama_barang.asc';
-
-  const key =
-    'sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh';
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'apikey': key,
-        'Authorization': 'Bearer ' + key
-      }
-    });
-
-    const isi = await response.text();
-
-    console.log('HTTP Status:', response.status);
-    console.log('Hasil API:', isi);
-
-    if (!response.ok) {
-      throw new Error(
-        'HTTP ' + response.status + ': ' + isi
-      );
-    }
-
-    const data = JSON.parse(isi);
-
-    if (!Array.isArray(data) || data.length === 0) {
-  pilihan.innerHTML =
-    '<option value="">Data kosong</option>';
-
-  hasil.textContent =
-    'HASIL PEMERIKSAAN: HTTP ' + response.status +
-    ' | Isi jawaban API: ' + isi;
-
-  return;
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+maxZoom:19,
+attribution:'© OpenStreetMap'
 }
+).addTo(map);
 
-    pilihan.innerHTML =
-      '<option value="">Pilih Barang</option>';
+setTimeout(() => map.invalidateSize(),500);
 
-    data.forEach(item => {
-      const option = document.createElement('option');
-      option.value = item.nama_barang;
-      option.textContent = item.nama_barang;
-      pilihan.appendChild(option);
-    });
+function pasangMarker(lat,lng){
 
-    hasil.textContent =
-      'BERHASIL: ' + data.length +
-      ' jenis barang ditemukan.';
+  latitude = lat;
+  longitude = lng;
+  lokasiSiap = true;
 
-  } catch (error) {
-    pilihan.innerHTML =
-      '<option value="">Gagal membaca barang</option>';
-
-    hasil.textContent =
-      'KESALAHAN API: ' + error.message;
-  }
-}
-
-muatBarang();
-
-
-// MEMBUKA PETA
-
-el('alamat').addEventListener('click',bukaPeta);
-
-function bukaPeta() {
-
-  el('petaModal').style.display = 'block';
-
-  if(!map) {
-
-    map = L.map('map').setView([-2.5,118],5);
-
-    L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {
-        attribution:'© OpenStreetMap'
-      }
-    ).addTo(map);
-
-    marker = L.marker([-2.5,118],{
+  if(marker){
+    marker.setLatLng([lat,lng]);
+  }else{
+    marker = L.marker([lat,lng],{
       draggable:true
     }).addTo(map);
 
-    marker.on('dragend',()=>{
-      ambilKoordinat();
+    marker.on('dragend',function(){
+      const p = marker.getLatLng();
+      pilihLokasi(p.lat,p.lng);
     });
-
-    map.on('click',e=>{
-      marker.setLatLng(e.latlng);
-      ambilKoordinat();
-    });
-
-    setTimeout(()=>{
-      map.invalidateSize();
-    },300);
   }
 
-  lokasiSiap = false;
-  alamatTerpilih = '';
+  map.setView([lat,lng],17);
 
-  el('statusGPS').textContent =
-    'Sedang mencari posisi GPS...';
+  el('statusLokasi').textContent =
+  'Lokasi berhasil dipilih.';
 
-  if(!navigator.geolocation) {
-    el('statusGPS').textContent =
-      'GPS tidak didukung. Silakan pilih lokasi pada peta.';
+  reverseAlamat(lat,lng);
+}
+
+// ===============================
+// PILIH LOKASI
+// ===============================
+
+async function pilihLokasi(lat,lng){
+
+  pasangMarker(lat,lng);
+
+}
+
+// ===============================
+// ALAMAT OTOMATIS
+// ===============================
+
+async function reverseAlamat(lat,lng){
+
+  try{
+
+    const url =
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+
+    const response = await fetch(url);
+    const result = await response.json();
+
+    if(result.display_name){
+      el('alamat').value = result.display_name;
+    }
+
+  }catch(error){
+
+    console.log('Alamat otomatis tidak tersedia',error);
+
+  }
+}
+
+// Klik peta untuk menentukan lokasi
+map.on('click',function(e){
+
+  pilihLokasi(e.latlng.lat,e.latlng.lng);
+
+});
+
+// ===============================
+// GPS
+// ===============================
+
+function gunakanGPS(){
+
+  if(!navigator.geolocation){
+    el('statusLokasi').textContent =
+    'GPS tidak didukung perangkat ini.';
     return;
   }
 
+  el('statusLokasi').textContent =
+  'Sedang mencari lokasi GPS...';
+
   navigator.geolocation.getCurrentPosition(
 
-    pos => {
+    function(position){
 
-      latitude = pos.coords.latitude;
-      longitude = pos.coords.longitude;
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
 
-      marker.setLatLng([latitude,longitude]);
-      map.setView([latitude,longitude],17);
-
-      ambilKoordinat();
+      pilihLokasi(lat,lng);
 
     },
 
-    error => {
+    function(error){
 
-      el('statusGPS').textContent =
-        'GPS tidak berhasil. Anda dapat memilih lokasi secara manual pada peta.';
-
-      map.setView([-2.5,118],5);
+      el('statusLokasi').textContent =
+      'GPS tidak ditemukan. Silakan pilih lokasi dengan mengetuk peta.';
 
     },
 
@@ -312,174 +269,157 @@ function bukaPeta() {
       timeout:20000,
       maximumAge:0
     }
+
   );
+
 }
 
-// MENGAMBIL KOORDINAT PIN
+el('btnGPS').addEventListener('click',gunakanGPS);
 
-async function ambilKoordinat() {
+// ===============================
+// JENIS BARANG
+// ===============================
 
-  const pos = marker.getLatLng();
+async function muatBarang(){
 
-  latitude = pos.lat;
-  longitude = pos.lng;
+  const pilihan = el('barang');
 
-  lokasiSiap = false;
-  alamatTerpilih = '';
+  pilihan.innerHTML =
+  '<option value="">Pilih jenis barang</option>';
 
-  const nomor = ++permintaanAlamat;
+  const {data,error} = await supabase
+    .from('stok_barang')
+    .select('nama_barang')
+    .order('nama_barang');
 
-  el('statusGPS').textContent =
-    'Mengambil alamat lokasi...';
+  if(error){
 
-  alamatSedangDicari = true;
+    console.log(error);
 
-  try {
+    const barangDefault = [
+      'Aqua Galon',
+      'Gas LPG 12 Kg',
+      'Gas LPG 3 Kg',
+      'Gas LPG 5,5 Kg'
+    ];
 
-    const url =
-      'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='
-      +latitude+'&lon='+longitude;
+    barangDefault.forEach(nama => {
+      const option = document.createElement('option');
+      option.value = nama;
+      option.textContent = nama;
+      pilihan.appendChild(option);
+    });
 
-    const response = await fetch(url);
-
-    if(!response.ok) {
-      throw new Error('Alamat tidak ditemukan');
-    }
-
-    const data = await response.json();
-
-    if(nomor !== permintaanAlamat) return;
-
-    if(!data.display_name) {
-      throw new Error('Alamat tidak tersedia');
-    }
-
-    alamatTerpilih = data.display_name;
-    lokasiSiap = true;
-
-    el('statusGPS').textContent =
-      'Alamat ditemukan. Tekan Gunakan Lokasi Ini.';
-
-  } catch(error) {
-
-    if(nomor === permintaanAlamat) {
-      lokasiSiap = false;
-      alamatTerpilih = '';
-
-      el('statusGPS').textContent =
-        'Alamat gagal ditemukan. Coba geser pin atau pilih titik lain.';
-    }
-
-  } finally {
-
-    if(nomor === permintaanAlamat) {
-      alamatSedangDicari = false;
-    }
-
-  }
-}
-
-// GUNAKAN LOKASI
-
-el('pilihLokasi').addEventListener('click',()=>{
-
-  if(alamatSedangDicari) {
-    alert('Mohon tunggu, alamat sedang dicari.');
     return;
   }
 
-  if(!lokasiSiap || !alamatTerpilih) {
-    alert('Pilih lokasi yang alamatnya berhasil ditemukan.');
-    return;
+  if(data && data.length > 0){
+
+    data.forEach(item => {
+
+      const option = document.createElement('option');
+
+      option.value = item.nama_barang;
+      option.textContent = item.nama_barang;
+
+      pilihan.appendChild(option);
+
+    });
+
+  }else{
+
+    pilihan.innerHTML =
+    '<option value="">Belum ada jenis barang</option>';
+
   }
 
-  el('alamat').value = alamatTerpilih;
+}
 
-  el('petaModal').style.display = 'none';
+muatBarang();
 
-});
-
-// BATAL
-
-el('batalPeta').addEventListener('click',()=>{
-
-  el('petaModal').style.display = 'none';
-
-});
-
+// ===============================
 // SIMPAN PESANAN
+// ===============================
 
-el('formPesan').addEventListener('submit',async e=>{
+el('formPesan').addEventListener('submit',async function(e){
 
   e.preventDefault();
 
-  if(!lokasiSiap || !alamatTerpilih ||
-     el('alamat').value !== alamatTerpilih) {
-
-    alert('Silakan tentukan alamat melalui peta terlebih dahulu.');
+  if(!lokasiSiap){
+    el('hasil').textContent =
+    'Silakan tentukan lokasi pada peta terlebih dahulu.';
     return;
   }
 
   const data = {
 
-    alamat:alamatTerpilih,
+    alamat:el('alamat').value.trim(),
+
     barang:el('barang').value,
+
     jlh:Number(el('jlh').value),
+
     customer:el('customer').value.trim(),
+
     latitude:latitude,
+
     longitude:longitude
 
   };
 
   const hasil = el('hasil');
-  const tombol = el('tombolSimpan');
+  const tombol = el('btnSimpan');
 
   tombol.disabled = true;
+  tombol.textContent = 'Menyimpan...';
+
   hasil.textContent = 'Sedang menyimpan pesanan...';
 
+  try{
 
-try {
+    const {error} = await supabase
+      .from('Pesan')
+      .insert(data);
 
-  const { error } = await supabase
-    .from('Pesan')
-    .insert(data);
+    if(error){
+      throw error;
+    }
 
-  console.log('Data pesanan:', data);
-  console.log('Error Supabase:', error);
-
-  if (error) {
     hasil.textContent =
-      'GAGAL: ' + error.message;
-  } else {
-    hasil.textContent =
-      'PESANAN BERHASIL DISIMPAN';
+    'PESANAN BERHASIL DISIMPAN!';
 
     el('formPesan').reset();
 
     latitude = null;
     longitude = null;
-    alamatTerpilih = '';
     lokasiSiap = false;
-  }
 
-} catch (error) {
+    if(marker){
+      map.removeLayer(marker);
+      marker = null;
+    }
 
-  hasil.textContent =
-    'GAGAL: ' + error.message;
+    el('statusLokasi').textContent =
+    'Silakan pilih lokasi pengiriman kembali.';
 
-} finally {
+  }catch(error){
 
-  tombol.disabled = false;
+    hasil.textContent =
+    'GAGAL MENYIMPAN: ' + error.message;
 
-}
-
+  }finally{
 
     tombol.disabled = false;
+    tombol.textContent = 'Simpan Pesanan';
 
   }
 
 });
 
+// Cari GPS ketika halaman dibuka
+gunakanGPS();
+
 </script>
+
 </body>
 </html>
