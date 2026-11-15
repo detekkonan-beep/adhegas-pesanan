@@ -280,42 +280,36 @@ el('btnGPS').addEventListener('click',gunakanGPS);
 // JENIS BARANG
 // ===============================
 
+
 async function muatBarang(){
 
-  const pilihan = el('barang');
+  const pilihan = document.getElementById('barang');
 
   pilihan.innerHTML =
-  '<option value="">Pilih jenis barang</option>';
+    '<option value="">Memuat jenis barang...</option>';
 
   const {data,error} = await supabase
     .from('stok_barang')
     .select('nama_barang')
-    .order('nama_barang');
+    .order('nama_barang', {ascending:true});
 
   if(error){
 
-    console.log(error);
+    console.error('Gagal membaca stok_barang:',error);
 
-    const barangDefault = [
-      'Aqua Galon',
-      'Gas LPG 12 Kg',
-      'Gas LPG 3 Kg',
-      'Gas LPG 5,5 Kg'
-    ];
-
-    barangDefault.forEach(nama => {
-      const option = document.createElement('option');
-      option.value = nama;
-      option.textContent = nama;
-      pilihan.appendChild(option);
-    });
+    pilihan.innerHTML =
+      '<option value="">Gagal memuat: ' +
+      error.message + '</option>';
 
     return;
   }
 
-  if(data && data.length > 0){
+  pilihan.innerHTML =
+    '<option value="">Pilih Jenis Barang</option>';
 
-    data.forEach(item => {
+  data.forEach(item => {
+
+    if(item.nama_barang){
 
       const option = document.createElement('option');
 
@@ -324,18 +318,19 @@ async function muatBarang(){
 
       pilihan.appendChild(option);
 
-    });
+    }
 
-  }else{
+  });
+
+  if(data.length === 0){
 
     pilihan.innerHTML =
-    '<option value="">Belum ada jenis barang</option>';
+      '<option value="">Belum ada jenis barang</option>';
 
   }
 
 }
 
-muatBarang();
 
 // ===============================
 // SIMPAN PESANAN
