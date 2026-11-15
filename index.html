@@ -11,74 +11,62 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
 *{box-sizing:border-box}
-
 body{
-  font-family:Arial,sans-serif;
-  background:#eef2f7;
-  padding:15px;
-  margin:0;
+font-family:Arial,sans-serif;
+background:#eef2f7;
+padding:15px;
+margin:0;
 }
-
 .container{
-  background:white;
-  padding:20px;
-  border-radius:15px;
-  max-width:500px;
-  margin:auto;
+background:white;
+padding:20px;
+border-radius:15px;
+max-width:500px;
+margin:auto;
 }
-
 h2{color:#1769aa}
-
 label{
-  display:block;
-  font-weight:bold;
-  margin-top:12px;
+display:block;
+font-weight:bold;
+margin-top:12px;
 }
-
 input,select{
-  width:100%;
-  padding:14px;
-  margin:8px 0 12px;
-  border:1px solid #ccc;
-  border-radius:8px;
-  font-size:16px;
-  background:white;
+width:100%;
+padding:14px;
+margin:8px 0 12px;
+border:1px solid #ccc;
+border-radius:8px;
+font-size:16px;
+background:white;
 }
-
 #map{
-  width:100%;
-  height:300px;
-  border-radius:10px;
-  margin:10px 0;
-  border:1px solid #ccc;
+width:100%;
+height:300px;
+border-radius:10px;
+margin:10px 0;
+border:1px solid #ccc;
 }
-
 button{
-  width:100%;
-  padding:15px;
-  background:#1769aa;
-  color:white;
-  border:0;
-  border-radius:8px;
-  font-size:17px;
-  font-weight:bold;
-  margin-top:12px;
+width:100%;
+padding:15px;
+background:#1769aa;
+color:white;
+border:0;
+border-radius:8px;
+font-size:17px;
+font-weight:bold;
+margin-top:12px;
 }
-
-button:disabled{
-  background:#888;
-}
-
+button:disabled{background:#888}
 .info{
-  font-size:13px;
-  color:#555;
-  margin:5px 0 10px;
+font-size:13px;
+color:#555;
+margin:5px 0 10px;
 }
-
 #hasil{
-  margin-top:15px;
-  font-weight:bold;
-  text-align:center;
+margin-top:15px;
+font-weight:bold;
+text-align:center;
 }
 </style>
 </head>
@@ -92,7 +80,8 @@ button:disabled{
 <form id="formPesan">
 
 <label>Alamat Pengiriman</label>
-<input id="alamat" placeholder="Alamat lengkap pelanggan" required>
+<input id="alamat"
+placeholder="Alamat lengkap pelanggan" required>
 
 <label>Lokasi Pengiriman</label>
 <div id="map"></div>
@@ -115,7 +104,8 @@ Gunakan Lokasi GPS Saya
 placeholder="Masukkan jumlah" required>
 
 <label>Nama Customer</label>
-<input id="customer" placeholder="Nama pelanggan" required>
+<input id="customer"
+placeholder="Nama pelanggan" required>
 
 <button type="submit" id="btnSimpan">
 Simpan Pesanan
@@ -164,29 +154,29 @@ setTimeout(() => map.invalidateSize(),500);
 
 function pasangMarker(lat,lng){
 
-  latitude = lat;
-  longitude = lng;
-  lokasiSiap = true;
+latitude = lat;
+longitude = lng;
+lokasiSiap = true;
 
-  if(marker){
-    marker.setLatLng([lat,lng]);
-  }else{
-    marker = L.marker([lat,lng],{
-      draggable:true
-    }).addTo(map);
+if(marker){
+marker.setLatLng([lat,lng]);
+}else{
+marker = L.marker([lat,lng],{
+draggable:true
+}).addTo(map);
 
-    marker.on('dragend',function(){
-      const p = marker.getLatLng();
-      pilihLokasi(p.lat,p.lng);
-    });
-  }
+marker.on('dragend',function(){
+const p = marker.getLatLng();
+pilihLokasi(p.lat,p.lng);
+});
+}
 
-  map.setView([lat,lng],17);
+map.setView([lat,lng],17);
 
-  el('statusLokasi').textContent =
-  'Lokasi berhasil dipilih.';
+el('statusLokasi').textContent =
+'Lokasi berhasil dipilih.';
 
-  reverseAlamat(lat,lng);
+reverseAlamat(lat,lng);
 }
 
 // ===============================
@@ -194,9 +184,7 @@ function pasangMarker(lat,lng){
 // ===============================
 
 async function pilihLokasi(lat,lng){
-
-  pasangMarker(lat,lng);
-
+pasangMarker(lat,lng);
 }
 
 // ===============================
@@ -205,30 +193,27 @@ async function pilihLokasi(lat,lng){
 
 async function reverseAlamat(lat,lng){
 
-  try{
+try{
 
-    const url =
-    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+const url =
+`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
 
-    const response = await fetch(url);
-    const result = await response.json();
+const response = await fetch(url);
+const result = await response.json();
 
-    if(result.display_name){
-      el('alamat').value = result.display_name;
-    }
-
-  }catch(error){
-
-    console.log('Alamat otomatis tidak tersedia',error);
-
-  }
+if(result.display_name){
+el('alamat').value = result.display_name;
 }
 
-// Klik peta untuk menentukan lokasi
+}catch(error){
+console.log('Alamat otomatis tidak tersedia',error);
+}
+
+}
+
+// Klik peta
 map.on('click',function(e){
-
-  pilihLokasi(e.latlng.lat,e.latlng.lng);
-
+pilihLokasi(e.latlng.lat,e.latlng.lng);
 });
 
 // ===============================
@@ -237,100 +222,108 @@ map.on('click',function(e){
 
 function gunakanGPS(){
 
-  if(!navigator.geolocation){
-    el('statusLokasi').textContent =
-    'GPS tidak didukung perangkat ini.';
-    return;
-  }
+if(!navigator.geolocation){
+el('statusLokasi').textContent =
+'GPS tidak didukung perangkat ini.';
+return;
+}
 
-  el('statusLokasi').textContent =
-  'Sedang mencari lokasi GPS...';
+el('statusLokasi').textContent =
+'Sedang mencari lokasi GPS...';
 
-  navigator.geolocation.getCurrentPosition(
+navigator.geolocation.getCurrentPosition(
 
-    function(position){
+function(position){
 
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
+const lat = position.coords.latitude;
+const lng = position.coords.longitude;
 
-      pilihLokasi(lat,lng);
+pilihLokasi(lat,lng);
 
-    },
+},
 
-    function(error){
+function(error){
 
-      el('statusLokasi').textContent =
-      'GPS tidak ditemukan. Silakan pilih lokasi dengan mengetuk peta.';
+el('statusLokasi').textContent =
+'GPS tidak ditemukan. Silakan pilih lokasi dengan mengetuk peta.';
 
-    },
+},
 
-    {
-      enableHighAccuracy:true,
-      timeout:20000,
-      maximumAge:0
-    }
+{
+enableHighAccuracy:true,
+timeout:20000,
+maximumAge:0
+}
 
-  );
+);
 
 }
 
 el('btnGPS').addEventListener('click',gunakanGPS);
 
 // ===============================
-// JENIS BARANG
+// JENIS BARANG DARI DATABASE
 // ===============================
-
 
 async function muatBarang(){
 
-  const pilihan = document.getElementById('barang');
+const pilihan = el('barang');
 
-  pilihan.innerHTML =
-    '<option value="">Memuat jenis barang...</option>';
+pilihan.innerHTML =
+'<option value="">Memuat jenis barang...</option>';
 
-  const {data,error} = await supabase
-    .from('stok_barang')
-    .select('nama_barang')
-    .order('nama_barang', {ascending:true});
+try{
 
-  if(error){
+const {data,error} = await supabase
+.from('stok_barang')
+.select('nama_barang')
+.order('nama_barang',{ascending:true});
 
-    console.error('Gagal membaca stok_barang:',error);
+if(error){
+throw error;
+}
 
-    pilihan.innerHTML =
-      '<option value="">Gagal memuat: ' +
-      error.message + '</option>';
+if(!data || data.length === 0){
 
-    return;
-  }
+pilihan.innerHTML =
+'<option value="">Belum ada jenis barang</option>';
 
-  pilihan.innerHTML =
-    '<option value="">Pilih Jenis Barang</option>';
+return;
+}
 
-  data.forEach(item => {
+pilihan.innerHTML =
+'<option value="">Pilih Jenis Barang</option>';
 
-    if(item.nama_barang){
+data.forEach(item => {
 
-      const option = document.createElement('option');
+if(item.nama_barang){
 
-      option.value = item.nama_barang;
-      option.textContent = item.nama_barang;
+const option = document.createElement('option');
 
-      pilihan.appendChild(option);
+option.value = item.nama_barang;
+option.textContent = item.nama_barang;
 
-    }
-
-  });
-
-  if(data.length === 0){
-
-    pilihan.innerHTML =
-      '<option value="">Belum ada jenis barang</option>';
-
-  }
+pilihan.appendChild(option);
 
 }
 
+});
+
+console.log('Barang berhasil dimuat:',data);
+
+}catch(error){
+
+console.error('Gagal membaca stok_barang:',error);
+
+pilihan.innerHTML =
+'<option value="">Gagal memuat barang</option>';
+
+el('hasil').textContent =
+'Gagal membaca stok barang: ' + error.message;
+
+}
+
+}
 
 // ===============================
 // SIMPAN PESANAN
@@ -338,80 +331,92 @@ async function muatBarang(){
 
 el('formPesan').addEventListener('submit',async function(e){
 
-  e.preventDefault();
+e.preventDefault();
 
-  if(!lokasiSiap){
-    el('hasil').textContent =
-    'Silakan tentukan lokasi pada peta terlebih dahulu.';
-    return;
-  }
+if(!lokasiSiap){
+el('hasil').textContent =
+'Silakan tentukan lokasi pada peta terlebih dahulu.';
+return;
+}
 
-  const data = {
+if(!el('barang').value){
+el('hasil').textContent =
+'Silakan pilih jenis barang.';
+return;
+}
 
-    alamat:el('alamat').value.trim(),
+const data = {
 
-    barang:el('barang').value,
+alamat:el('alamat').value.trim(),
 
-    jlh:Number(el('jlh').value),
+barang:el('barang').value,
 
-    customer:el('customer').value.trim(),
+jlh:Number(el('jlh').value),
 
-    latitude:latitude,
+customer:el('customer').value.trim(),
 
-    longitude:longitude
+latitude:latitude,
 
-  };
+longitude:longitude
 
-  const hasil = el('hasil');
-  const tombol = el('btnSimpan');
+};
 
-  tombol.disabled = true;
-  tombol.textContent = 'Menyimpan...';
+const hasil = el('hasil');
+const tombol = el('btnSimpan');
 
-  hasil.textContent = 'Sedang menyimpan pesanan...';
+tombol.disabled = true;
+tombol.textContent = 'Menyimpan...';
 
-  try{
+hasil.textContent = 'Sedang menyimpan pesanan...';
 
-    const {error} = await supabase
-      .from('Pesan')
-      .insert(data);
+try{
 
-    if(error){
-      throw error;
-    }
+const {error} = await supabase
+.from('Pesan')
+.insert(data);
 
-    hasil.textContent =
-    'PESANAN BERHASIL DISIMPAN!';
+if(error){
+throw error;
+}
 
-    el('formPesan').reset();
+hasil.textContent =
+'PESANAN BERHASIL DISIMPAN!';
 
-    latitude = null;
-    longitude = null;
-    lokasiSiap = false;
+el('formPesan').reset();
 
-    if(marker){
-      map.removeLayer(marker);
-      marker = null;
-    }
+latitude = null;
+longitude = null;
+lokasiSiap = false;
 
-    el('statusLokasi').textContent =
-    'Silakan pilih lokasi pengiriman kembali.';
+if(marker){
+map.removeLayer(marker);
+marker = null;
+}
 
-  }catch(error){
+el('statusLokasi').textContent =
+'Silakan pilih lokasi pengiriman kembali.';
 
-    hasil.textContent =
-    'GAGAL MENYIMPAN: ' + error.message;
+}catch(error){
 
-  }finally{
+hasil.textContent =
+'GAGAL MENYIMPAN: ' + error.message;
 
-    tombol.disabled = false;
-    tombol.textContent = 'Simpan Pesanan';
+}finally{
 
-  }
+tombol.disabled = false;
+tombol.textContent = 'Simpan Pesanan';
+
+}
 
 });
 
-// Cari GPS ketika halaman dibuka
+// ===============================
+// JALANKAN SAAT HALAMAN DIBUKA
+// ===============================
+
+// INI BAGIAN YANG SEBELUMNYA TERLEWAT
+muatBarang();
+
 gunakanGPS();
 
 </script>
