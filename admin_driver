@@ -1,0 +1,466 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Driver AdheGas</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px;
+  font-family: Arial, sans-serif;
+  background: #eef2f7;
+  color: #222;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+}
+
+header {
+  background: #123c32;
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+header h2 { margin: 0 0 6px; }
+
+.card {
+  background: white;
+  padding: 18px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px #00000012;
+}
+
+input, textarea, select, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 7px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 7px;
+  font-size: 15px;
+}
+
+button {
+  border: none;
+  background: #147d55;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button.secondary { background: #475569; }
+button.danger { background: #b91c1c; }
+
+label {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.check input {
+  width: auto;
+  margin: 0;
+}
+
+.hidden { display: none; }
+
+.driver {
+  border: 1px solid #ddd;
+  padding: 14px;
+  border-radius: 9px;
+  margin-top: 12px;
+}
+
+.driver h3 { margin: 0 0 8px; }
+
+.info {
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #e5e7eb;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status.aktif { background: #dcfce7; color: #166534; }
+.status.nonaktif { background: #e5e7eb; color: #374151; }
+.status.dibekukan { background: #fef3c7; color: #92400e; }
+.status.blokir { background: #fee2e2; color: #991b1b; }
+
+small { color: #64748b; }
+
+#pesan {
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 7px;
+  display: none;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  body { padding: 10px; }
+  .card { padding: 14px; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <h2>AdheGas</h2>
+  <div>Panel Admin - Manajemen Driver</div>
+</header>
+
+<div id="pesan"></div>
+
+<!-- LOGIN ADMIN -->
+<div class="card" id="loginPanel">
+  <h3>Login Admin</h3>
+
+  <label>Email Admin</label>
+  <input type="email" id="emailLogin"
+         placeholder="Email Supabase Auth">
+
+  <label>Password</label>
+  <input type="password" id="passwordLogin"
+         placeholder="Password">
+
+  <button onclick="loginAdmin()">MASUK</button>
+</div>
+
+<!-- PANEL ADMIN -->
+<div id="adminPanel" class="hidden">
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h3>Daftar Driver</h3>
+      <button class="secondary" style="width:auto"
+              onclick="logoutAdmin()">Keluar</button>
+    </div>
+
+    <input id="pencarian"
+           placeholder="Cari nama atau nomor HP..."
+           oninput="tampilkanDriver()">
+
+    <button onclick="muatDriver()">MUAT ULANG DATA</button>
+
+    <div id="jumlahDriver"></div>
+    <div id="daftarDriver">Memuat data...</div>
+  </div>
+
+  <!-- TAMBAH DRIVER -->
+  <div class="card">
+    <h3>Tambah Driver Baru</h3>
+
+    <label>Nama lengkap</label>
+    <input id="nama" placeholder="Nama driver">
+
+    <label>Nomor HP</label>
+    <input id="no_hp" placeholder="08xxxxxxxxxx">
+
+    <label>Alamat</label>
+    <textarea id="alamat" placeholder="Alamat driver"></textarea>
+
+    <label>Email</label>
+    <input id="email" type="email" placeholder="Email (opsional)">
+
+    <div class="check">
+      <input type="checkbox" id="ktp">
+      <label for="ktp">KTP terverifikasi</label>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="sim">
+      <label for="sim">SIM terverifikasi</label>
+    </div>
+
+    <div class="check">
+      <input type="checkbox" id="stnk">
+      <label for="stnk">STNK terverifikasi</label>
+    </div>
+
+    <label>Catatan seleksi</label>
+    <textarea id="catatan"
+              placeholder="Catatan wawancara dan penilaian perilaku"></textarea>
+
+    <button onclick="tambahDriver()">SIMPAN DRIVER</button>
+
+    <small>
+      Driver baru akan memiliki status NONAKTIF.
+      Kode akses dibuat melalui proses keamanan tersendiri.
+    </small>
+  </div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL =
+  "https://bbjhnulqwhugdxucwjip.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_VMUc-hCmm1YznMRzQE5wxg_YmUXz2Uh";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+let semuaDriver = [];
+
+function notifikasi(teks, error = false) {
+  const el = document.getElementById("pesan");
+  el.style.display = "block";
+  el.style.background = error ? "#fee2e2" : "#dcfce7";
+  el.style.color = error ? "#991b1b" : "#166534";
+  el.textContent = teks;
+}
+
+async function periksaLogin() {
+  const { data, error } = await db.auth.getSession();
+
+  if (error) {
+    notifikasi(error.message, true);
+    return;
+  }
+
+  const masuk = !!data.session;
+
+  document.getElementById("loginPanel").classList.toggle(
+    "hidden", masuk
+  );
+
+  document.getElementById("adminPanel").classList.toggle(
+    "hidden", !masuk
+  );
+
+  if (masuk) muatDriver();
+}
+
+async function loginAdmin() {
+  const email = document.getElementById("emailLogin").value.trim();
+  const password = document.getElementById("passwordLogin").value;
+
+  if (!email || !password) {
+    notifikasi("Email dan password harus diisi.", true);
+    return;
+  }
+
+  const { error } = await db.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    notifikasi("Login gagal: " + error.message, true);
+    return;
+  }
+
+  notifikasi("Login berhasil.");
+  periksaLogin();
+}
+
+async function logoutAdmin() {
+  await db.auth.signOut();
+  semuaDriver = [];
+  document.getElementById("daftarDriver").innerHTML = "";
+  periksaLogin();
+  notifikasi("Anda sudah keluar.");
+}
+
+async function muatDriver() {
+  document.getElementById("daftarDriver").textContent =
+    "Sedang membaca data driver...";
+
+  const { data, error } = await db
+    .from("Daftar_Driver")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    document.getElementById("daftarDriver").textContent =
+      "Gagal membaca data: " + error.message;
+
+    notifikasi(
+      "Periksa izin RLS dan kebijakan akses admin di Supabase.",
+      true
+    );
+    return;
+  }
+
+  semuaDriver = data || [];
+  tampilkanDriver();
+}
+
+function tampilkanDriver() {
+  const cari = document.getElementById("pencarian")
+    .value.toLowerCase();
+
+  const hasil = semuaDriver.filter(d =>
+    (d.nama || "").toLowerCase().includes(cari) ||
+    (d.no_hp || "").toLowerCase().includes(cari)
+  );
+
+  document.getElementById("jumlahDriver").textContent =
+    "Jumlah driver: " + hasil.length;
+
+  const tempat = document.getElementById("daftarDriver");
+  tempat.innerHTML = "";
+
+  if (hasil.length === 0) {
+    tempat.textContent = "Belum ada data driver.";
+    return;
+  }
+
+  hasil.forEach(d => {
+    const kartu = document.createElement("div");
+    kartu.className = "driver";
+
+    const judul = document.createElement("h3");
+    judul.textContent = d.nama || "-";
+
+    const status = document.createElement("span");
+    status.className = "status " + d.status_driver;
+    status.textContent = (d.status_driver || "").toUpperCase();
+
+    const info = document.createElement("div");
+    info.className = "info";
+    info.textContent =
+      "No. HP: " + (d.no_hp || "-") +
+      "\nAlamat: " + (d.alamat || "-") +
+      "\nEmail: " + (d.email || "-") +
+      "\nKTP: " + (d.ktp_terverifikasi ? "Terverifikasi" : "Belum") +
+      "\nSIM: " + (d.sim_terverifikasi ? "Terverifikasi" : "Belum") +
+      "\nSTNK: " + (d.stnk_terverifikasi ? "Terverifikasi" : "Belum") +
+      "\nCatatan: " + (d.catatan_seleksi || "-");
+
+    const pilih = document.createElement("select");
+
+    ["aktif", "nonaktif", "dibekukan", "blokir"].forEach(s => {
+      const opsi = document.createElement("option");
+      opsi.value = s;
+      opsi.textContent = s.toUpperCase();
+      opsi.selected = d.status_driver === s;
+      pilih.appendChild(opsi);
+    });
+
+    const tombol = document.createElement("button");
+    tombol.textContent = "SIMPAN STATUS";
+    tombol.onclick = () => ubahStatus(d.id, pilih.value);
+
+    kartu.appendChild(judul);
+    kartu.appendChild(status);
+    kartu.appendChild(info);
+    kartu.appendChild(pilih);
+    kartu.appendChild(tombol);
+
+    tempat.appendChild(kartu);
+  });
+}
+
+async function tambahDriver() {
+  const nama = document.getElementById("nama").value.trim();
+  const no_hp = document.getElementById("no_hp").value.trim();
+  const alamat = document.getElementById("alamat").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const catatan = document.getElementById("catatan").value.trim();
+
+  if (!nama || !no_hp || !alamat) {
+    notifikasi("Nama, nomor HP, dan alamat wajib diisi.", true);
+    return;
+  }
+
+  const dataDriver = {
+    nama,
+    no_hp,
+    alamat,
+    email: email || null,
+    status_driver: "nonaktif",
+    ktp_terverifikasi: document.getElementById("ktp").checked,
+    sim_terverifikasi: document.getElementById("sim").checked,
+    stnk_terverifikasi: document.getElementById("stnk").checked,
+    catatan_seleksi: catatan || null
+  };
+
+  const { error } = await db
+    .from("Daftar_Driver")
+    .insert([dataDriver]);
+
+  if (error) {
+    notifikasi("Gagal menyimpan: " + error.message, true);
+    return;
+  }
+
+  notifikasi("Driver berhasil ditambahkan.");
+
+  document.getElementById("nama").value = "";
+  document.getElementById("no_hp").value = "";
+  document.getElementById("alamat").value = "";
+  document.getElementById("email").value = "";
+  document.getElementById("catatan").value = "";
+  document.getElementById("ktp").checked = false;
+  document.getElementById("sim").checked = false;
+  document.getElementById("stnk").checked = false;
+
+  muatDriver();
+}
+
+async function ubahStatus(id, status) {
+  const { error } = await db
+    .from("Daftar_Driver")
+    .update({ status_driver: status })
+    .eq("id", id);
+
+  if (error) {
+    notifikasi("Gagal mengubah status: " + error.message, true);
+    return;
+  }
+
+  notifikasi("Status driver berhasil diperbarui.");
+  muatDriver();
+}
+
+db.auth.onAuthStateChange((_event, session) => {
+  const masuk = !!session;
+
+  document.getElementById("loginPanel").classList.toggle(
+    "hidden", masuk
+  );
+
+  document.getElementById("adminPanel").classList.toggle(
+    "hidden", !masuk
+  );
+
+  if (masuk) muatDriver();
+});
+
+periksaLogin();
+</script>
+
+</body>
+</html>
